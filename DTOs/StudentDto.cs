@@ -1,24 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace SchoolAgendCRUD.Entities
+﻿namespace SchoolAgendCRUD.DTOs
 {
-    public class Student
+    public class StudentDto
     {
         public int Id { get; set; }
-
-        [StringLength(150)]
         public string Name { get; set; }
-
-        [StringLength(190)]
         public string Email { get; set; }
-
-        [StringLength(150)]
         public string Telephone { get; set; }
-
-        [StringLength(250)]
         public string Address { get; set; }
         public DateTime StudentCreated { get; set; }
         public bool IsActive { get; set; }
-
     }
 }

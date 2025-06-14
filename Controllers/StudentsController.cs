@@ -23,7 +23,19 @@ namespace SchoolAgendCRUD.Controllers
         public IActionResult GetStudents()
         {
             var students = _context.Students.ToList();
-            return Ok(students);
+            var studentsResponse = new List<StudentDto>();
+
+            studentsResponse = students.Select(st => new StudentDto
+            { 
+                Id = st.Id,
+                Name = st.Name,
+                Email = st.Email,
+                Telephone = st.Telephone,
+                Address = st.Address,
+                
+            }).ToList();
+
+            return Ok(studentsResponse);
         }
 
         [HttpGet("{id}")]
@@ -46,7 +58,17 @@ namespace SchoolAgendCRUD.Controllers
                 return NotFound($"Student with ID {id} not found.");
             }
 
-            return Ok(student);
+            var studentResponse = new StudentDto
+            {
+                Id = student.Id,
+                Name = student.Name,
+                Email = student.Email,
+                Telephone = student.Telephone,
+                Address = student.Address,
+
+            };
+
+            return Ok(studentResponse);
         }
 
         [HttpPost]
@@ -112,7 +134,7 @@ namespace SchoolAgendCRUD.Controllers
                 return NotFound($"Student with ID {id} not found.");
             }
             _context.Students.Remove(student);
-
+            _context.SaveChanges();
             return NoContent();
         }
     }

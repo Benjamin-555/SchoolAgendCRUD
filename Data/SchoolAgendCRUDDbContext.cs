@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SchoolAgendCRUD.Entities;
 
 namespace SchoolAgendCRUD.Data
 {
@@ -9,8 +10,8 @@ namespace SchoolAgendCRUD.Data
         public SchoolAgendCRUDDbContext(DbContextOptions<SchoolAgendCRUDDbContext> options): base(options) 
         { 
             
-        
         }
-        
+        public DbSet<Student> Students { get; set; }
+        public DbSet<Grade> Grades { get; set; }    
     }
 }

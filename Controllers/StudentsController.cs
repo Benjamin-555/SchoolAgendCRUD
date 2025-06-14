@@ -1,6 +1,9 @@
 ﻿using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SchoolAgendCRUD.Data;
 using SchoolAgendCRUD.Entities;
+using SchoolAgendCRUD.DTOs;
 
 namespace SchoolAgendCRUD.Controllers
 {
@@ -8,28 +11,25 @@ namespace SchoolAgendCRUD.Controllers
     [Route("api/[controller]")]
     public class StudentsController : ControllerBase
     {
-        private List<SchoolAgendCRUD.Entities.Student> _students;
+        private readonly SchoolAgendCRUDDbContext _context;
 
-        public StudentsController()
+        public StudentsController(SchoolAgendCRUDDbContext context)
         {
-            _students = new List<Entities.Student>();
-            _students.Add(new Entities.Student { Id = 1, Name = "Benjamin", Email = "example@gmail.com", Address = "Street Anacaona", Telephone = "839493903", IsActive = true });
-            _students.Add(new Entities.Student { Id = 2, Name = "Pedro", Email = "example@gmail.com", Address = "Street Anacaona", Telephone = "839493903", IsActive = true });
-            _students.Add(new Entities.Student { Id = 3, Name = "Maria", Email = "example@gmail.com", Address = "Street Anacaona", Telephone = "839493903", IsActive = true });
-            _students.Add(new Entities.Student { Id = 4, Name = "Jose", Email = "example@gmail.com", Address = "Street Anacaona", Telephone = "839493903", IsActive = true });
+            _context = context;
         }
-
+        
         [HttpGet]
 
         public IActionResult GetStudents()
         {
-            return Ok(_students);
+            var students = _context.Students.ToList();
+            return Ok(students);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetStudent(int id) {
 
-            Student student = new Student();
+            //Student student = new Student();
 
             //foreach (var item in _students)
             //{
@@ -40,7 +40,7 @@ namespace SchoolAgendCRUD.Controllers
             //    }
             //}
             //student = _students.FirstOrDefault(stu => stu.Id == id);
-            student = _students.Where(st => st.Id == id).FirstOrDefault(); //We are using LINQ is more practice for the development
+            var student = _context.Students.Where(st => st.Id == id).FirstOrDefault(); 
             if (student == null)
             {
                 return NotFound($"Student with ID {id} not found.");
@@ -50,37 +50,47 @@ namespace SchoolAgendCRUD.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateStudent([FromBody] Student student)
+        public IActionResult CreateStudent([FromBody] CreateStudentDto request)
         {
-            if (student == null) {
+            if (request == null) {
                 return BadRequest("Student can't be null");
             }
 
-            student.Id = _students.Count + 1;
-            student.StudentCreated = DateTime.Now;
-            _students.Add(student);
-            return CreatedAtAction(nameof(GetStudent), new { id = student.Id }, student);
+            var student = new Student 
+            { 
+                Address = request.Address,
+                Name = request.Name,
+                StudentCreated = DateTime.Now,
+                Email = request.Email,
+                Telephone = request.Telephone,
+            };
+            _context.Students.Add(student);
+            _context.SaveChanges();
+            return Ok(new {id = student.Id});
         }
 
-        [HttpPut]
-        public IActionResult UpdateStudent([FromBody] Student student) {
+        [HttpPut("{id}")]
+        public IActionResult UpdateStudent(int id, [FromBody] UpdateStudentDto request) {
 
-            if (student == null || student.Id != student.Id)
+            if (request == null || request.Id != request.Id)
             {
                 return BadRequest("Student is null or ID mismatch.");
             }
-            var existingStudent = _students.FirstOrDefault(stu => stu.Id == student.Id);
+            var existingStudent = _context.Students.FirstOrDefault(stu => stu.Id == request.Id);
             if (existingStudent == null)
             {
-                return NotFound($"Student with ID {student.Id} not found.");
+                return NotFound($"Student with ID {request.Id} not found.");
             }
 
-            existingStudent.Name = student.Name;
-            existingStudent.Address = student.Address;
-            existingStudent.Telephone = student.Telephone;
-            existingStudent.Email = student.Email;
+            existingStudent.Name = request.Name;
+            existingStudent.Address = request.Address;
+            existingStudent.Telephone = request.Telephone;
+            existingStudent.Email = request.Email;
             existingStudent.StudentCreated = DateTime.Now;
-            return Ok(_students);
+            _context.Students.Update(existingStudent);
+            _context.SaveChanges();
+            //return Ok(existingStudent);
+            return NoContent();
         }
 
         //[HttpPut ("{id}")]
@@ -96,14 +106,14 @@ namespace SchoolAgendCRUD.Controllers
         [HttpDelete ("{id}")]
         public IActionResult DeleteStudent(int id)
         {
-            var student = _students.FirstOrDefault(stu => stu.Id == id);
+            var student = _context.Students.FirstOrDefault(stu => stu.Id == id);
             if(student == null)
             {
                 return NotFound($"Student with ID {id} not found.");
             }
-            _students.Remove(student);
+            _context.Students.Remove(student);
 
-            return Ok(_students);
+            return NoContent();
         }
     }
 } 

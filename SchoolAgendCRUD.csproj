@@ -20,4 +20,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SchoolAgend.Application\SchoolAgend.Application.csproj" />
+    <ProjectReference Include="..\SchoolAgend.Domain\SchoolAgend.Domain.csproj" />
+    <ProjectReference Include="..\SchoolAgend.Infrastructure\SchoolAgend.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

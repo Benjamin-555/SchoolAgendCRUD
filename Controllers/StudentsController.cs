@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SchoolAgendCRUD.Data;
-using SchoolAgendCRUD.Entities;
+using SchoolAgendCRUD.Domain.Entities;
 using SchoolAgendCRUD.DTOs;
+using SchoolAgendCRUD.Infrastructure.Data;
 
 namespace SchoolAgendCRUD.Controllers
 {
@@ -37,6 +37,8 @@ namespace SchoolAgendCRUD.Controllers
 
             return Ok(studentsResponse);
         }
+
+       
 
         [HttpGet("{id}")]
         public IActionResult GetStudent(int id) {
@@ -72,7 +74,7 @@ namespace SchoolAgendCRUD.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateStudent([FromBody] CreateStudentDto request)
+        public IActionResult CreateStudent([FromBody] StudentDto request)
         {
             if (request == null) {
                 return BadRequest("Student can't be null");
@@ -92,7 +94,7 @@ namespace SchoolAgendCRUD.Controllers
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateStudent(int id, [FromBody] UpdateStudentDto request) {
+        public IActionResult UpdateStudent(int id, [FromBody] StudentDto request) {
 
             if (request == null || request.Id != request.Id)
             {

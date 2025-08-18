@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SchoolAgendCRUD.Data;
-using SchoolAgendCRUD.Entities;
+using SchoolAgendCRUD.Infrastructure.Data;
+using SchoolAgendCRUD.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using SchoolAgend.Infrastructure.Data.Repositories;
+using SchoolAgendCRUD.DTOs;
 
 namespace SchoolAgendCRUD.Controllers
 {
@@ -8,73 +11,91 @@ namespace SchoolAgendCRUD.Controllers
     [Route("api/[controller]")]
     public class GradesController: Controller
     {
-        private readonly SchoolAgendCRUDDbContext _context;
+        private readonly GradeRepository _gradeRepository;
 
-        public GradesController(SchoolAgendCRUDDbContext context)
+        public GradesController(GradeRepository gradeRepository)
         {
-            _context = context;
+            _gradeRepository = gradeRepository;
         }
 
         [HttpGet]
 
-        public IActionResult GetGrades()
+        public async Task<IActionResult> GetGrades()
         {
-            var grades = _context.Grades.ToList();
+            var grades = await _gradeRepository.GetAllGrades();
+            return Ok(grades);
+        }
+
+        [HttpGet]
+        [Route("by-grade")]
+
+        public async Task<IActionResult> GetGradesByStudent([FromQuery]int studentId)
+        {
+            if (studentId <= 0)
+            {
+                return BadRequest("Student ID must be greater than zero.");
+            }
+            var grades = await _gradeRepository.GetGradesByStudentId(studentId);
+            return Ok(grades);
+        }
+
+        [HttpGet]
+        [Route("with-grades")]
+        public async Task<IActionResult> GetStudentsWithGrades()
+        {
+            var grades = await _gradeRepository.GetGradesWithStudents(0);
             return Ok(grades);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetGrades(int id)
+        public async Task<IActionResult> GetGradeById(int id)
         {
-
-            var grade = _context.Students.Where(st => st.Id == id).FirstOrDefault();
+            var grade = await _gradeRepository.GetGradeById(id);
             if (grade == null)
-            {
-                return NotFound($"Grade with ID {id} not found.");
-            }
+                return NotFound();
 
             return Ok(grade);
         }
+
 
         [HttpPost]
-        public IActionResult CreateGrade([FromBody] Grade grade)
+        public async Task<IActionResult> CreateGrade([FromBody] Grade grade)
         {
             if (grade == null)
-            {
-                return BadRequest("Grade can't be null");
-            }
+                return BadRequest("Grade data is null.");
 
-            var studentExists = _context.Students.Any(s => s.Id == grade.StudentId);
-            if (!studentExists)
-            {
-                return BadRequest($"No existe el estudiante con ID = {grade.StudentId}");
-            }
-            grade.Value = grade.Value;
-            _context.Grades.Add(grade);
-            _context.SaveChanges();
-            return Ok(grade);
+            if (string.IsNullOrWhiteSpace(grade.Subject))
+                return BadRequest("Subject is required.");
+
+            if (grade.Value < 0)
+                return BadRequest("Grade value must be non-negative.");
+
+            if (grade.StudentId <= 0)
+                return BadRequest("StudentId must be greater than 0.");
+
+            var createdGrade = await _gradeRepository.CreateGrade(grade);
+
+            // Puedes usar Created() si no quieres redirigir a otra acción
+            return Created($"/api/grades/{createdGrade.Id}", createdGrade);
         }
 
-        [HttpPut]
-        public IActionResult UpdateGrade([FromBody] Grade grade)
-        {
 
-            if (grade == null || grade.Id != grade.Id)
+
+        [HttpPut]
+        public async Task<IActionResult> UpdateGradeAsync([FromBody] UpdateGradeDto request)
+        {
+            if (request == null || request.Id <= 0)
             {
-                return BadRequest("Grade is null or ID mismatch.");
+                return BadRequest("Invalid grade data.");
             }
-            var existingGrade = _context.Grades.FirstOrDefault(stu => stu.Id == grade.Id);
+            var existingGrade = await _gradeRepository.GetGradeById(request.Id);
             if (existingGrade == null)
             {
-                return NotFound($"Grade with ID {grade.Id} not found.");
+                return NotFound($"Grade with ID {request.Id} not found.");
             }
-
-            existingGrade.Id = grade.Id;
-            existingGrade.StudentId = grade.StudentId;
-            existingGrade.Subject = grade.Subject;
-            existingGrade.Value = grade.Value;
-            _context.Grades.Update(existingGrade);
-            _context.SaveChanges();
+            existingGrade.Value = request.Value;
+            existingGrade.StudentId = request.StudentId;
+            await _gradeRepository.UpdateGrade(existingGrade);
             return Ok(existingGrade);
         }
 
@@ -89,14 +110,16 @@ namespace SchoolAgendCRUD.Controllers
         //}
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteGrade(int id)
+        public async Task<IActionResult> DeleteGrade(int id)
         {
-            var grade = _context.Grades.FirstOrDefault(stu => stu.Id == id);
+            var grade = await _gradeRepository.GetGradeById(id);
+
             if (grade == null)
             {
                 return NotFound($"Grade with ID {id} not found.");
             }
-            _context.Grades.Remove(grade);
+
+            await _gradeRepository.DeleteGrade(id);
 
             return NoContent();
         }

@@ -2,16 +2,21 @@
 using SchoolAgend.Domain.Entities;
 using SchoolAgendCRUD.DTOs;
 using SchoolAgend.Infrastructure.Data.Repositories;
+using SchoolAgendCRUD;
+using SchoolAgend.Application.Services;
+using SchoolAgend.Application.Contracts;
+using SchoolAgendCRUD.DTOs;
 
 namespace SchoolAgendCRUD.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class SessionsController : Controller
+    public class SessionsController : ControllerBase
     {
-        private readonly SessionRepository _sessionRepository;
+        private readonly ISessionRepository _sessionRepository;
 
-        public SessionsController(SessionRepository sessionRepository)
+        // Inyección de la interfaz
+        public SessionsController(ISessionRepository sessionRepository)
         {
             _sessionRepository = sessionRepository;
         }
@@ -19,14 +24,14 @@ namespace SchoolAgendCRUD.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSessions()
         {
-            var sessions = await _sessionRepository.GetAllSessions();
+            var sessions = await _sessionRepository.GetAllAsync();
             return Ok(sessions);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSessionById(int id)
         {
-            var session = await _sessionRepository.GetSessionById(id);
+            var session = await _sessionRepository.GetByIdAsync(id);
             if (session == null) return NotFound();
             return Ok(session);
         }
@@ -34,35 +39,33 @@ namespace SchoolAgendCRUD.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSession([FromBody] Session session)
         {
-            if (session == null || string.IsNullOrWhiteSpace(session.Title))
-                return BadRequest("Invalid session data.");
-
-            var createdSession = await _sessionRepository.CreateSession(session);
-            return Created($"/api/sessions/{createdSession.Id}", createdSession);
+            
+            await _sessionRepository.AddAsync(session);
+            return Created($"/api/sessions/{session.Id}", session);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateSession([FromBody] UpdateSessionDto request)
+        public async Task<IActionResult> UpdateSession([FromBody] Session session)
         {
-            if (request == null || request.Id <= 0) return BadRequest("Invalid session data.");
+            if (session == null || session.Id <= 0) return BadRequest("Invalid session data.");
 
-            var existingSession = await _sessionRepository.GetSessionById(request.Id);
-            if (existingSession == null) return NotFound($"Session with ID {request.Id} not found.");
+            var existingSession = await _sessionRepository.GetByIdAsync(session.Id);
+            if (existingSession == null) return NotFound($"Session with ID {session.Id} not found.");
 
-            existingSession.Title = request.Title;
-            existingSession.CourseId = request.CourseId;
+            existingSession.Classroom = session.Classroom;
+            existingSession.DayOfWeek = session.DayOfWeek;
 
-            await _sessionRepository.UpdateSession(existingSession);
+            await _sessionRepository.UpdateAsync(existingSession);
             return Ok(existingSession);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSession(int id)
         {
-            var session = await _sessionRepository.GetSessionById(id);
+            var session = await _sessionRepository.GetByIdAsync(id);
             if (session == null) return NotFound($"Session with ID {id} not found.");
 
-            await _sessionRepository.DeleteSession(id);
+            await _sessionRepository.DeleteAsync(session);
             return NoContent();
         }
     }

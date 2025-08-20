@@ -1,18 +1,22 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SchoolAgendCRUD.DTOs;
 using SchoolAgend.Domain.Entities;
-using System.Threading.Tasks;
+using SchoolAgendCRUD.DTOs;
 using SchoolAgend.Infrastructure.Data.Repositories;
+using SchoolAgendCRUD;
+using SchoolAgend.Application.Services;
+using SchoolAgend.Application.Contracts;
+using SchoolAgendCRUD.DTOs;
+
 
 namespace SchoolAgendCRUD.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TasksIController : Controller
+    public class TasksIController : ControllerBase
     {
-        private readonly TaskRepository _taskRepository;
+        private readonly ITaskIRepository _taskRepository;
 
-        public TasksIController(TaskRepository taskRepository)
+        public TasksIController(ITaskIRepository taskRepository)
         {
             _taskRepository = taskRepository;
         }
@@ -20,49 +24,51 @@ namespace SchoolAgendCRUD.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTasks()
         {
-            var tasks = await _taskRepository.GetAllTasks();
+            var tasks = await _taskRepository.GetAllAsync();
             return Ok(tasks);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(int id)
         {
-            var task = await _taskRepository.GetTaskById(id);
+            var task = await _taskRepository.GetByIdAsync(id);
             if (task == null) return NotFound();
             return Ok(task);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTask([FromBody] Task task)
+        public async Task<IActionResult> CreateTask([FromBody] TaskI task)
         {
-            var createdTask = await _taskRepository.CreateTask(task);
-            return Created($"/api/tasks/{createdTask.Id}", createdTask);
+            if (task == null || string.IsNullOrWhiteSpace(task.Title))
+                return BadRequest("Invalid task data.");
+
+            await _taskRepository.AddAsync(task);
+            return Created($"/api/tasks/{task.Id}", task);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateTask([FromBody] UpdateTaskDto request)
+        public async Task<IActionResult> UpdateTask([FromBody] TaskI task)
         {
-            if (request == null || request.Id <= 0) return BadRequest("Invalid task data.");
+            if (task == null || task.Id <= 0) return BadRequest("Invalid task data.");
 
-            var existingTask = await _taskRepository.GetTaskById(request.Id);
-            if (existingTask == null) return NotFound($"Task with ID {request.Id} not found.");
+            var existingTask = await _taskRepository.GetByIdAsync(task.Id);
+            if (existingTask == null) return NotFound($"Task with ID {task.Id} not found.");
 
-            existingTask.Title = request.Title;
-            existingTask.Description = request.Description;
-            existingTask.DueDate = request.DueDate;
-            existingTask.SessionId = request.SessionId;
+            existingTask.Title = task.Title;
+            existingTask.Description = task.Description;
+            existingTask.DueDate = task.DueDate;
 
-            await _taskRepository.UpdateTask(existingTask);
+            await _taskRepository.UpdateAsync(existingTask);
             return Ok(existingTask);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
-            var task = await _taskRepository.GetTaskById(id);
+            var task = await _taskRepository.GetByIdAsync(id);
             if (task == null) return NotFound($"Task with ID {id} not found.");
 
-            await _taskRepository.DeleteTask(id);
+            await _taskRepository.DeleteAsync(task);
             return NoContent();
         }
     }

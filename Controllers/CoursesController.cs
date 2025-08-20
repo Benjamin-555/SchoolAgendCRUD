@@ -2,16 +2,20 @@
 using SchoolAgend.Domain.Entities;
 using SchoolAgendCRUD.DTOs;
 using SchoolAgend.Infrastructure.Data.Repositories;
+using System.Threading.Tasks;
+using SchoolAgend.Application.Contracts;
+using SchoolAgendCRUD.DTOs;
+using SchoolAgend.Application.Services;
 
 namespace SchoolAgendCRUD.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class CoursesController : Controller
+    public class CoursesController : ControllerBase
     {
-        private readonly CourseRepository _courseRepository;
+        private readonly ICourseRepository _courseRepository;
 
-        public CoursesController(CourseRepository courseRepository)
+        public CoursesController(ICourseRepository courseRepository)
         {
             _courseRepository = courseRepository;
         }
@@ -19,14 +23,14 @@ namespace SchoolAgendCRUD.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCourses()
         {
-            var courses = await _courseRepository.GetAllCourses();
+            var courses = await _courseRepository.GetAllAsync();
             return Ok(courses);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCourseById(int id)
         {
-            var course = await _courseRepository.GetCourseById(id);
+            var course = await _courseRepository.GetByIdAsync(id);
             if (course == null) return NotFound();
             return Ok(course);
         }
@@ -37,32 +41,33 @@ namespace SchoolAgendCRUD.Controllers
             if (course == null || string.IsNullOrWhiteSpace(course.Name))
                 return BadRequest("Invalid course data.");
 
-            var createdCourse = await _courseRepository.CreateCourse(course);
-            return Created($"/api/courses/{createdCourse.Id}", createdCourse);
+            await _courseRepository.AddAsync(course);
+            return Created($"/api/courses/{course.Id}", course);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCourse([FromBody] UpdateCourseDto request)
+        public async Task<IActionResult> UpdateCourse([FromBody] Course course)
         {
-            if (request == null || request.Id <= 0) return BadRequest("Invalid course data.");
+            if (course == null || course.Id <= 0) return BadRequest("Invalid course data.");
 
-            var existingCourse = await _courseRepository.GetCourseById(request.Id);
-            if (existingCourse == null) return NotFound($"Course with ID {request.Id} not found.");
+            var existingCourse = await _courseRepository.GetByIdAsync(course.Id);
+            if (existingCourse == null) return NotFound($"Course with ID {course.Id} not found.");
 
-            existingCourse.Name = request.Name;
-            existingCourse.Teacher = request.Teacher;
+            existingCourse.Name = course.Name;
+            existingCourse.Teacher = course.Teacher;
+            existingCourse.Color = course.Color;
 
-            await _courseRepository.UpdateCourse(existingCourse);
+            await _courseRepository.UpdateAsync(existingCourse);
             return Ok(existingCourse);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCourse(int id)
         {
-            var course = await _courseRepository.GetCourseById(id);
+            var course = await _courseRepository.GetByIdAsync(id);
             if (course == null) return NotFound($"Course with ID {id} not found.");
 
-            await _courseRepository.DeleteCourse(id);
+            await _courseRepository.DeleteAsync(course);
             return NoContent();
         }
     }

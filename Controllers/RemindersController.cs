@@ -2,16 +2,18 @@
 using SchoolAgend.Domain.Entities;
 using SchoolAgendCRUD.DTOs;
 using SchoolAgend.Infrastructure.Data.Repositories;
+using SchoolAgend.Application.Contracts;
+using SchoolAgendCRUD.DTOs;
 
 namespace SchoolAgendCRUD.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class RemindersController : Controller
+    public class RemindersController : ControllerBase
     {
-        private readonly ReminderRepository _reminderRepository;
+        private readonly IReminderRepository _reminderRepository;
 
-        public RemindersController(ReminderRepository reminderRepository)
+        public RemindersController(IReminderRepository reminderRepository)
         {
             _reminderRepository = reminderRepository;
         }
@@ -19,14 +21,14 @@ namespace SchoolAgendCRUD.Controllers
         [HttpGet]
         public async Task<IActionResult> GetReminders()
         {
-            var reminders = await _reminderRepository.GetAllReminders();
+            var reminders = await _reminderRepository.GetAllAsync();
             return Ok(reminders);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetReminderById(int id)
         {
-            var reminder = await _reminderRepository.GetReminderById(id);
+            var reminder = await _reminderRepository.GetByIdAsync(id);
             if (reminder == null) return NotFound();
             return Ok(reminder);
         }
@@ -37,33 +39,31 @@ namespace SchoolAgendCRUD.Controllers
             if (reminder == null || string.IsNullOrWhiteSpace(reminder.Message))
                 return BadRequest("Invalid reminder data.");
 
-            var createdReminder = await _reminderRepository.CreateReminder(reminder);
-            return Created($"/api/reminders/{createdReminder.Id}", createdReminder);
+            await _reminderRepository.AddAsync(reminder);
+            return Created($"/api/reminders/{reminder.Id}", reminder);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateReminder([FromBody] UpdateReminderDto request)
+        public async Task<IActionResult> UpdateReminder([FromBody] Reminder reminder)
         {
-            if (request == null || request.Id <= 0) return BadRequest("Invalid reminder data.");
+            if (reminder == null || reminder.Id <= 0) return BadRequest("Invalid reminder data.");
 
-            var existingReminder = await _reminderRepository.GetReminderById(request.Id);
-            if (existingReminder == null) return NotFound($"Reminder with ID {request.Id} not found.");
+            var existingReminder = await _reminderRepository.GetByIdAsync(reminder.Id);
+            if (existingReminder == null) return NotFound($"Reminder with ID {reminder.Id} not found.");
 
-            existingReminder.Message = request.Message;
-            existingReminder.DueDate = request.DueDate;
-            existingReminder.TaskId = request.TaskId;
+            existingReminder.Message = reminder.Message;
 
-            await _reminderRepository.UpdateReminder(existingReminder);
+            await _reminderRepository.UpdateAsync(existingReminder);
             return Ok(existingReminder);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteReminder(int id)
         {
-            var reminder = await _reminderRepository.GetReminderById(id);
+            var reminder = await _reminderRepository.GetByIdAsync(id);
             if (reminder == null) return NotFound($"Reminder with ID {id} not found.");
 
-            await _reminderRepository.DeleteReminder(id);
+            await _reminderRepository.DeleteAsync(reminder);
             return NoContent();
         }
     }
